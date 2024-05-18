@@ -2,28 +2,26 @@
 import 'dart:io';
 
 import 'package:earthquake_app/providers/app_data_provider.dart';
-import 'package:earthquake_app/settings_page.dart';
+import 'package:earthquake_app/pages/settings_page.dart';
+import 'package:earthquake_app/providers/earthquake_provider.dart';
 import 'package:earthquake_app/utils/helper_functions.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher_string.dart';
 
-class HomePage extends StatefulWidget {
+class HomePage extends ConsumerStatefulWidget {
   const HomePage({super.key});
 
   @override
-  State<HomePage> createState() => _HomePageState();
+  ConsumerState<HomePage> createState() => _HomePageState();
 }
 
-class _HomePageState extends State<HomePage> {
-  @override
-  void didChangeDependencies() {
-    Provider.of<AppDataProvider>(context, listen: false).init();
-    super.didChangeDependencies();
-  }
-
+class _HomePageState extends ConsumerState<HomePage> {
   @override
   Widget build(BuildContext context) {
+    final weather = ref.watch(weatherProvider);
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('EarthShake'),
@@ -35,56 +33,52 @@ class _HomePageState extends State<HomePage> {
           IconButton(
             onPressed: () {
               Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const SettingsPage()),
+                context,
+                MaterialPageRoute(builder: (context) => const SettingsPage()),
               );
             },
             icon: const Icon(Icons.settings),
           ),
         ],
       ),
-      body: Consumer<AppDataProvider>(
-        builder: (context, provider, child) => provider.hasDataLoaded
-            ? provider.earthquakeModel!.features!.isEmpty
-                ? const Center(
-                    child: Text('No record found'),
-                  )
-                : ListView.builder(
-                    itemCount: provider.earthquakeModel!.features!.length,
-                    itemBuilder: (context, index) {
-                      final value = provider.shouldUseLocation;
-                      final data = provider
-                          .earthquakeModel!.features![index].properties!;
-                      final location = provider
-                          .earthquakeModel!.features![index].geometry!.coordinates!;
-                      final latitude = location[0];
-                      final longitude = location[1];
-                      print('data  $data');
-                      print('location  $location');
-                      print('latitude  $latitude');
-                      print('longitude  $longitude');
-                      return ListTile(
-                        title: Text(data.place ?? data.title ?? 'Unknown'),
-                        subtitle: Text(getFormattedDateTime(
-                            data.time!, 'EEE MMM dd yyyy hh:mm a')),
-                        trailing: Chip(
-                          avatar: data.alert == null
-                              ? null
-                              : CircleAvatar(
-                                  backgroundColor:
-                                      provider.getAlertColor(data.alert!),
-                                ),
-                          label: Text('${data.mag}'),
-                        ),
-                        onTap: () async {
-                          await provider.viewLocationMap(value, latitude, longitude);
-                        },
-                      );
+      body: weather.when(
+        data: (model) => model.features!.isEmpty
+            ? const Center(child: Text('No record found'))
+            : ListView.builder(
+                itemCount: model.features!.length,
+                itemBuilder: (context, index) {
+                  // final value = provider.shouldUseLocation;
+                  final data = model.features![index].properties!;
+                  final location =
+                      model.features![index].geometry!.coordinates!;
+                  final latitude = location[0];
+                  final longitude = location[1];
+                  print('data  $data');
+                  print('location  $location');
+                  print('latitude  $latitude');
+                  print('longitude  $longitude');
+                  return ListTile(
+                    title: Text(data.place ?? data.title ?? 'Unknown'),
+                    subtitle: Text(getFormattedDateTime(
+                        data.time!, 'EEE MMM dd yyyy hh:mm a')),
+                    trailing: Chip(
+                      avatar: data.alert == null
+                          ? null
+                          : CircleAvatar(
+                              backgroundColor: getAlertColor(data.alert!),
+                            ),
+                      label: Text('${data.mag!.toStringAsFixed(2)}'),
+                    ),
+                    onTap: () async {
+                      await viewLocationMap(data.place, latitude, longitude);
                     },
-                  )
-            : const Center(
-                child: Text('Please wait'),
+                  );
+                },
               ),
+        error: (e, trace) => Center(child: Text('Error: ${e.toString()}')),
+        loading: () => const Center(
+          child: CircularProgressIndicator(),
+        ),
       ),
     );
   }
@@ -92,54 +86,58 @@ class _HomePageState extends State<HomePage> {
   void _showSortingDialog() {
     showDialog(
         context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('Sort by'),
-          content: Consumer<AppDataProvider>(
-            builder: (context, provider, child) => Column(
+        builder: (context) {
+          final groupValue = orderFilterValues[ref.read(orderFilterProvider)]!;
+          return AlertDialog(
+            title: const Text('Sort by'),
+            content: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
                 RadioGroup(
-                    groupValue: provider.orderBy,
+                    groupValue: groupValue,
                     value: 'magnitude',
                     label: 'Magnitude-Desc',
                     onChange: (value) {
-                      provider.setOrder(value!);
-                    }
-                ),
+                      Navigator.pop(context);
+                      ref.read(orderFilterProvider.notifier).state =
+                          OrderFilter.magnitude;
+                    }),
                 RadioGroup(
-                    groupValue: provider.orderBy,
+                    groupValue: groupValue,
                     value: 'magnitude-asc',
                     label: 'Magnitude-Asc',
                     onChange: (value) {
-                      provider.setOrder(value!);
-                    }
-                ),
+                      Navigator.pop(context);
+                      ref.read(orderFilterProvider.notifier).state =
+                          OrderFilter.magnitudeAsc;
+                    }),
                 RadioGroup(
-                    groupValue: provider.orderBy,
+                    groupValue: groupValue,
                     value: 'time',
                     label: 'Time-Desc',
                     onChange: (value) {
-                      provider.setOrder(value!);
-                    }
-                ),
+                      Navigator.pop(context);
+                      ref.read(orderFilterProvider.notifier).state =
+                          OrderFilter.time;
+                    }),
                 RadioGroup(
-                    groupValue: provider.orderBy,
+                    groupValue: groupValue,
                     value: 'time-asc',
                     label: 'Time-Asc',
                     onChange: (value) {
-                      provider.setOrder(value!);
-                    }
-                ),
+                      Navigator.pop(context);
+                      ref.read(orderFilterProvider.notifier).state =
+                          OrderFilter.timeAsc;
+                    }),
               ],
             ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Close')
-            )
-          ],
-            ));
+            actions: [
+              TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Close'))
+            ],
+          );
+        });
   }
 }
 
@@ -168,14 +166,14 @@ class RadioGroup extends StatelessWidget {
   }
 }
 
-viewLocationMap(String? place, num latitude, num longitude) async{
+viewLocationMap(String? place, num latitude, num longitude) async {
   String mapUrl = '';
-  if(Platform.isAndroid) {
+  if (Platform.isAndroid) {
     mapUrl = 'geo:$latitude,$longitude?q=$place';
   } else {
     mapUrl = 'http://maps.apple.com/?q=$place';
   }
-  if(await canLaunchUrlString(mapUrl)) {
+  if (await canLaunchUrlString(mapUrl)) {
     await launchUrlString(mapUrl);
   } else {
     // showMsg(context, 'Cannot perform this task');

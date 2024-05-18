@@ -2,13 +2,11 @@ import 'package:earthquake_app/pages/home_page.dart';
 import 'package:earthquake_app/providers/app_data_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_easyloading/flutter_easyloading.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:provider/provider.dart';
 
 void main() {
-  runApp(ChangeNotifierProvider(
-    create: (context) => AppDataProvider(),
-    child: const MyApp()),
-  );
+  runApp(const ProviderScope(child: MyApp()));
 }
 
 class MyApp extends StatelessWidget {

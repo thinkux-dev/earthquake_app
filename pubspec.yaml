@@ -43,6 +43,9 @@ dependencies:
   flutter_easyloading:
   url_launcher:
   maps_launcher:
+  flutter_riverpod:
+  freezed_annotation:
+  json_annotation: 
 
 dev_dependencies:
   flutter_test:
@@ -54,6 +57,11 @@ dev_dependencies:
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
   flutter_lints: ^3.0.0
+  custom_lint:
+  riverpod_lint:
+  build_runner:
+  freezed:
+  json_serializable:
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec

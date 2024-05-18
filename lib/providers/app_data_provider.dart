@@ -18,6 +18,7 @@ class AppDataProvider with ChangeNotifier {
   String _startTime = '', _endTime = '';
   String _orderBy = 'time', _minMagnitude = '4';
   String? _currentCity;
+  String? _currentState;
   final double _maxRadiusKmThreshold = 20001.6;
   bool _shouldUseLocation = false;
   EarthquakeModel? earthquakeModel;
@@ -40,6 +41,8 @@ class AppDataProvider with ChangeNotifier {
   String get orderBy => _orderBy;
 
   String? get currentCity => _currentCity;
+
+  String? get currentState => _currentState;
 
   double get maxRadiusKmThreshold => _maxRadiusKmThreshold;
 
@@ -92,10 +95,13 @@ class AppDataProvider with ChangeNotifier {
     final uri = Uri.https(baseUrl.authority, baseUrl.path, queryParameters);
     try {
       final response = await http.get(uri);
+      // print('response=> $response');
       if(response.statusCode == 200) {
         final json = jsonDecode(response.body);
+        // print('json=> $json');
         earthquakeModel = EarthquakeModel.fromJson(json);
-        print('earthquakeModelData: ${earthquakeModel!.features!.length}');
+        // print('earthquakeModel+> $earthquakeModel.runtimeType');
+        // print('earthquakeModelData: ${earthquakeModel!.features!.length}');
         notifyListeners();
       }
     } catch(err){
@@ -123,10 +129,16 @@ class AppDataProvider with ChangeNotifier {
   }
 
   setMaxRadiusKm(double value) async{
-    _maxRadiusKm = value;
-    _setQueryParams();
-    notifyListeners();
-    await getEarthquakeData();
+    final locationValue = _shouldUseLocation;
+    print('locationValue $_shouldUseLocation');
+    if(locationValue) {
+      await _determinePosition();
+      _maxRadiusKm = 500;
+      value = _maxRadiusKm;
+      notifyListeners();
+      _setQueryParams();
+      await getEarthquakeData();
+    }
   }
 
   Future<void> setLocation(bool value) async{
@@ -139,6 +151,8 @@ class AppDataProvider with ChangeNotifier {
 
       _latitude = positionLatitude;
       _longitude = positionLongitude;
+      print('_long: $_longitude');
+      print('_lat: $_latitude');
       await _getCurrentCity();
       _maxRadiusKm = 500;
       _setQueryParams();
@@ -153,13 +167,17 @@ class AppDataProvider with ChangeNotifier {
     }
   }
 
+  // Gets the current city of the user device
   Future<void> _getCurrentCity() async {
     try{
       final placemarkList = await gc.placemarkFromCoordinates(_latitude, _longitude);
       print('placemarkList $placemarkList');
       if(placemarkList.isNotEmpty) {
         final placemark = placemarkList.first;
+        print('placemark $placemark');
         _currentCity = placemark.locality;
+        // _currentState = placemark.administrativeArea;
+        print('_currentCity $_currentCity');
         notifyListeners();
       }
     }catch(error) {
@@ -234,9 +252,9 @@ class AppDataProvider with ChangeNotifier {
 
     // String mapUrl = '';
     // if(Platform.isAndroid) {
-    //   mapUrl = 'geo:$latitude,$longitude?q=$place';
+    //   mapUrl = 'geo:$currentLatitude,$currentLongitude';
     // } else {
-    //   mapUrl = 'http://maps.apple.com/?q=$place';
+    //   mapUrl = 'http://maps.apple.com/?q=0?lat:$currentLatitude,long:$currentLongitude';
     // }
     // if(await canLaunchUrlString(mapUrl)) {
     //   await launchUrlString(mapUrl);

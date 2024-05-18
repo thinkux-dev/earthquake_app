@@ -39,7 +39,7 @@ class _SettingsPageState extends State<SettingsPage> {
                           provider.setStartTime(date);
                         }
                       },
-                      icon: Icon(Icons.calendar_month),
+                      icon: const Icon(Icons.calendar_month),
                     ),
                   ),
                   ListTile(
@@ -74,7 +74,8 @@ class _SettingsPageState extends State<SettingsPage> {
                 subtitle: provider.currentCity == null
                     ? null
                     : Text(
-                        "Earthquake data will be shown within ${provider.maxRadiusKm} Km radius from ${provider.currentCity}"),
+                    "Earthquake data will be shown within ${provider.maxRadiusKm} Km radius from ${provider.currentCity}"
+                ),
                 value: provider.shouldUseLocation,
                 onChanged: (value) async {
                   EasyLoading.show(status: 'Getting device location...');
@@ -106,8 +107,8 @@ class _SettingsPageState extends State<SettingsPage> {
             //   child: Slider(
             //     value: provider.maxRadiusKm,
             //     max: 5000,
-            //     divisions: 6,
-            //     label: (provider.maxRadiusKm).round().toString(),
+            //     divisions: 10,
+            //     label: provider.maxRadiusKm.round().toString(),
             //     onChanged: (value) async{
             //       await provider.setMaxRadiusKm(value);
             //     },
